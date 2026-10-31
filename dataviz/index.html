@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grupo Meridiano · Painel de apoio ao memorando de IA</title>
+<style>
+  :root {
+    --navy: #0b3a5b; --navy-2: #12507c; --ink: #1b2430; --muted: #5d6b7a; --line: #dde3ea;
+    --bg: #f4f6f9; --card: #ffffff;
+    --crit: #c0392b; --att: #e0a800; --ok: #2e8b57; --info: #2f6fb0; --gray: #a9b4c0;
+    --corrigir: #e07b00; --manter: #2f6fb0; --desligar: #c0392b; --ampliar: #2e8b57;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; color: var(--ink); background: var(--bg); font-size: 14px; line-height: 1.45; }
+  header { background: var(--navy); color: #fff; padding: 18px 28px 0; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header p { margin: 4px 0 12px; color: #c9d8e6; font-size: 13px; }
+  nav { display: flex; gap: 2px; flex-wrap: wrap; }
+  nav button { background: transparent; color: #c9d8e6; border: 0; padding: 10px 16px; font-size: 14px; cursor: pointer; border-radius: 6px 6px 0 0; }
+  nav button:hover { color: #fff; background: rgba(255,255,255,.08); }
+  nav button[aria-selected="true"] { background: var(--bg); color: var(--navy); font-weight: 600; }
+  main { padding: 22px 28px 40px; max-width: 1320px; margin: 0 auto; }
+  section[role="tabpanel"] { display: none; }
+  section[role="tabpanel"].active { display: block; }
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .g3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .g4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  @media (max-width: 1000px) { .g2, .g3, .g4 { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .card h2 { font-size: 15px; margin: 0 0 4px; color: var(--navy); }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 12px; }
+  .src { color: var(--muted); font-size: 11.5px; margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 6px; }
+  .kpi .v { font-size: 26px; font-weight: 700; color: var(--navy); }
+  .kpi .l { color: var(--muted); font-size: 12.5px; }
+  .kpi.alert .v { color: var(--crit); }
+  .lead { font-size: 15px; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .p-corrigir { background: var(--corrigir); } .p-manter { background: var(--manter); } .p-desligar { background: var(--desligar); } .p-ampliar { background: var(--ampliar); }
+  .lvl { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  .l-crit { background: var(--crit); } .l-att { background: var(--att); } .l-ok { background: var(--ok); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; background: #f7f9fb; }
+  .heat td.cell { text-align: center; cursor: help; }
+  .heat td.cell span { display: inline-block; width: 100%; padding: 6px 4px; border-radius: 6px; color: #fff; font-weight: 600; font-size: 12px; }
+  .heat tr.row { cursor: pointer; }
+  .heat tr.row:hover td { background: #f1f6fb; }
+  .heat tr.row.sel td { background: #e6f0fa; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+  .chip[aria-pressed="true"] { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .detail h3 { margin: 0 0 6px; font-size: 16px; color: var(--navy); }
+  .detail ul { margin: 4px 0 10px; padding-left: 18px; }
+  .detail .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; margin-top: 10px; }
+  .note { background: #fff8e1; border: 1px solid #f1d98a; border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .decision { border-left: 4px solid var(--navy); padding: 6px 12px; margin: 8px 0; background: #f7f9fb; border-radius: 0 8px 8px 0; }
+  .decision b { color: var(--navy); }
+  svg text { font-family: inherit; }
+  .tip { position: fixed; pointer-events: none; background: #13202d; color: #fff; padding: 6px 9px; border-radius: 6px; font-size: 12px; max-width: 280px; opacity: 0; transition: opacity .1s; z-index: 10; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  footer { color: var(--muted); font-size: 12px; text-align: center; padding: 10px 0 30px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Grupo Meridiano · Painel de apoio ao memorando de IA</h1>
+  <p>Comitê executivo de 5 de novembro de 2026 · Recomendação: <strong>escalar com guardrails</strong> · Dados extraídos em 30/09/2026</p>
+  <nav role="tablist" aria-label="Seções do painel" id="tabs"></nav>
+</header>
+<main id="main"></main>
+<footer>Fonte: business case "Grupo Meridiano: Oito Pilotos, Um Congelamento" (MBA em IA e Dados para Negócios, Módulo 4) e memorando executivo. Valores marcados como <em>calculado</em> foram derivados dos números do case.</footer>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+/* ============================== DADOS (todos do case) ============================== */
+const D = {
+  custo: {
+    set25: 143, ago26: 519, acum12m: 3900, // R$ mil
+    composicaoAgo26: [
+      { label: "Agente de atrasos (Logística)", v: 119, c: "#e07b00" },
+      { label: "Agente de atendimento (Digital)", v: 107, c: "#c0392b", note: "cerca de R$ 95 mil em tokens" },
+      { label: "Antifraude de fornecedor (Serv. Fin.)", v: 95, c: "#2f6fb0" },
+      { label: "Nuvem sem dono identificado", v: 85, c: "#7f8c99" },
+      { label: "Assinaturas individuais (até)", v: 46, c: "#a9b4c0", note: "Valor máximo; sem centro de custo" },
+      { label: "Aplicativo de escala (Lojas)", v: 0.6, c: "#8e44ad" },
+    ],
+    atrasos: [{ label: "Mar/2026 (pico da crise)", v: 261 }, { label: "Ago/2026", v: 119 }],
+  },
+  beneficio: {
+    declaradoAno: 141000, // R$ mil
+    itens: [
+      { label: "Agente de atrasos", v: 65000, how: "Sem contrafactual; atraso caiu com a volta da transportadora anterior" },
+      { label: "Modelo de recompra", v: 25000, how: "Calculado sobre o GMV de quem recebeu a campanha" },
+      { label: "Agente de atendimento", v: 3200, how: "Custo evitado, mas o quadro do SAC não foi reduzido desde fevereiro" },
+    ],
+    certificado: 0,
+  },
+  atraso: [
+    { label: "Black Friday 2025", v: 13 },
+    { label: "Mar/2026", v: 23, ev: "Troca de transportadora em 3 estados; agente de atrasos entra no ar" },
+    { label: "Abr/2026", v: 6, ev: "Volta à transportadora anterior nos 3 estados" },
+  ],
+  credito: [
+    { label: "AUC do modelo", a: 0.79, b: 0.70, fmt: v => v.toFixed(2).replace(".", ","), worse: "down", max: 1 },
+    { label: "Inadimplência da carteira", a: 3.1, b: 6.6, fmt: v => v.toFixed(1).replace(".", ",") + "%", worse: "up", max: 8 },
+    { label: "Saldo inadimplente (R$ mi)", a: 1.2, b: 3.9, fmt: v => "R$ " + v.toFixed(1).replace(".", ",") + " mi", worse: "up", max: 4.5 },
+    { label: "Taxa de aprovação", a: 62, b: 63, fmt: v => v + "%", worse: "none", max: 100 },
+  ],
+  maturidade: [
+    { u: "Digital", v: 3.2, nivel: "3 · Delegado", gov: 1.4 },
+    { u: "Serviços Financeiros", v: 3.1, nivel: "3 · Delegado", gov: 1.4 },
+    { u: "Corporativo", v: 2.5, nivel: "2 · Assistido" },
+    { u: "Logística", v: 2.4, nivel: "1 · Apoiado" },
+    { u: "Lojas", v: 1.6, nivel: "1 · Apoiado" },
+  ],
+  preferencia: [
+    { g: "Lideranças corporativas", o: "Centralização", v: 73 },
+    { g: "Digital", o: "Autonomia das unidades", v: 60 },
+    { g: "Serviços Financeiros", o: "Autonomia das unidades", v: 57 },
+    { g: "Equipes (modelo mais votado)", o: "Híbrido", v: 37 },
+  ],
+  shadow: [
+    { label: "Usam ferramentas de IA não fornecidas pela empresa", v: 61 },
+    { label: "Já inseriram dados de clientes ou colaboradores", v: 24 },
+    { label: "Idem, nas Lojas", v: 38 },
+  ],
+};
+
+const LV = { crit: { t: "Crítico", c: "var(--crit)" }, att: { t: "Atenção", c: "var(--att)" }, ok: { t: "Adequado", c: "var(--ok)" } };
+const CRIT = [["risco", "Risco não controlado"], ["valor", "Evidência de valor"], ["sust", "Sustentabilidade operacional"], ["efic", "Eficiência de custo"], ["contr", "Restrição contratual"]];
+
+const INIT = [
+  { id: 1, nome: "Agente de atendimento", un: "Digital", dir: "corrigir", ampl: true,
+    s: { risco: ["crit", "Exposição de nome e endereço entre clientes em 14/07; reembolsos de até R$ 300 sem limite por cliente ou dia"], valor: ["att", "55% de resolução declarada (meta 60%), sem métrica de qualidade; homologação com 50 perguntas da própria equipe"], sust: ["ok", "Time de dados do Digital"], efic: ["att", "cerca de 30 mil tokens por mensagem, 180 mil por conversa: a política de reembolso inteira vai em cada mensagem"], contr: ["ok", "Sem restrição relevante"] },
+    fund: "Defeitos documentados e não corrigidos: incidente de dados e 1.840 reembolsos indevidos em junho (cerca de R$ 312 mil).",
+    acoes: ["Retirar já a autonomia de reembolso", "Limite por cliente e por dia e verificação do status do pedido", "Isolar dados entre sessões, com teste por equipe independente", "Enviar só os trechos pertinentes da política (recuperação) em vez do texto inteiro"],
+    med: "Grupo de controle de contatos; resolução verificada (sem recontato), satisfação, reembolsos indevidos e custo por conversa resolvida.",
+    portao: "Mantém 40%. Portão 1 libera 60%; Portão 2 (ganho certificado contra grupo de controle) libera 80%." },
+  { id: 2, nome: "Modelo de recompra", un: "Digital", dir: "manter",
+    s: { risco: ["ok", "Risco baixo; base legal a confirmar"], valor: ["att", "Benefício de R$ 25 mi calculado sobre o GMV de quem recebeu a campanha"], sust: ["ok", "Time do Digital"], efic: ["ok", "Sem desperdício apontado"], contr: ["ok", "Sem restrição"] },
+    fund: "Risco controlável; o problema é a medição, não o modelo.",
+    acoes: ["Instituir grupo de controle aleatório permanente", "Confirmar base legal para uso de dados de clientes"],
+    med: "Receita incremental contra o grupo de controle.", portao: "Candidato a ampliar só após incrementalidade certificada." },
+  { id: 3, nome: "Limite de crédito a sellers", un: "Serviços Financeiros", dir: "corrigir",
+    s: { risco: ["crit", "AUC de 0,79 para 0,70; variável estado do seller; recusas sem explicação; pedido de revisão de junho sem resposta"], valor: ["att", "Perda crescente de carteira"], sust: ["att", "Equipe classificou a queda como oscilação pontual"], efic: ["att", "Saldo inadimplente de R$ 1,2 mi para R$ 3,9 mi"], contr: ["ok", "Sem restrição"] },
+    fund: "Inadimplência mais que dobrou (3,1% para 6,6%) com aprovação cravada em 62–63%: o corte não reage ao risco.",
+    acoes: ["Revisão humana em novos limites e aumentos, com política conservadora", "Validação independente e recalibração do modelo", "Retirar ou justificar a variável estado", "Explicar recusas e abrir canal de revisão (LGPD, art. 20)"],
+    med: "AUC e calibração por safra, inadimplência, aprovação versus risco, efeitos por estado e prazo de resposta a revisões.", portao: "Reclassificado como risco alto: decisões no Comitê de IA." },
+  { id: 4, nome: "Antifraude de fornecedor", un: "Serviços Financeiros", dir: "manter",
+    s: { risco: ["att", "Desempenho visto só no painel do fornecedor"], valor: ["att", "Sem medição independente"], sust: ["att", "Dependência do fornecedor"], efic: ["att", "Maior item do portfólio: R$ 95 mil/mês, R$ 1,14 mi em 12 meses (29%)"], contr: ["crit", "36 meses com multa rescisória, até ago/2028"] },
+    fund: "Desligar custa mais do que manter; falta medir.",
+    acoes: ["Medição própria de perdas por fraude e falsos positivos", "Amostra de transações revisadas manualmente", "Preparar com antecedência a decisão de renovar ou sair"],
+    med: "Perdas por fraude, falsos positivos e comparação com amostra revisada.", portao: "Sem ampliação; decisão de renovação antes de ago/2028." },
+  { id: 5, nome: "Assistente de RH", un: "TI corporativa", dir: "manter",
+    s: { risco: ["att", "Base legal para dados de colaboradores a confirmar"], valor: ["att", "Sem medição"], sust: ["ok", "TI corporativa"], efic: ["att", "Mesma função do agente de atendimento em outra nuvem e com outro provedor"], contr: ["att", "Vencimento de nuvem em 2027"] },
+    fund: "Funciona, mas duplica plataforma.",
+    acoes: ["Manter no escopo atual, sem ampliar", "Migrar para a plataforma de referência na renovação da nuvem"],
+    med: "Taxa de resolução, chamados de RH evitados e custo por atendimento.", portao: "Sem ampliação até a migração." },
+  { id: 6, nome: "Agente de tratativa de atrasos", un: "Logística", dir: "corrigir",
+    s: { risco: ["att", "Credenciais das transportadoras na conta da consultoria"], valor: ["att", "Benefício de R$ 65 mi/ano confundido com a volta da transportadora anterior"], sust: ["crit", "Nenhuma pessoa interna opera o fluxo"], efic: ["att", "Modelo de maior capacidade em todas as oito etapas, inclusive as triviais"], contr: ["crit", "Contrato da consultoria vence em 31/12/2026"] },
+    fund: "Dependência total de terceiro com contrato vencendo em dezembro.",
+    acoes: ["Credenciais para o cofre corporativo em novembro", "Renovar a consultoria por prazo curto, só para transição", "Modelos menores nas etapas triviais"],
+    med: "Amostra de pedidos atrasados sem tratativa automática; tempo de resolução, cancelamentos e custo por pedido tratado.", portao: "Extensão às lojas físicas suspensa até internalizar e medir." },
+  { id: 7, nome: "Aplicativo de escala de turnos", un: "Lojas", dir: "corrigir", ampl: true,
+    s: { risco: ["crit", "CPF e afastamentos de cerca de 1.300 colaboradores em repositório e nuvem pessoais; senha compartilhada por 45 gerentes"], valor: ["att", "Uso comprovado, valor não medido"], sust: ["crit", "O autor sai em novembro; ninguém mais opera o código"], efic: ["ok", "R$ 600/mês"], contr: ["ok", "Sem contrato"] },
+    fund: "Maior risco e menor custo do portfólio: uma priorização por custo não o alcançaria.",
+    acoes: ["Migrar código e dados para ambiente corporativo antes da saída do analista", "Acesso individual no lugar da senha compartilhada", "Minimizar dados e elaborar RIPD", "Nomear dono de negócio nas Lojas"],
+    med: "45 lojas com o aplicativo contra lojas comparáveis sem ele: horas de gestão, falhas de cobertura, horas extras.", portao: "Extensão a outras regionais após RIPD e piloto medido." },
+  { id: 8, nome: "Assinaturas individuais de IA", un: "Todas as unidades", dir: "desligar",
+    s: { risco: ["crit", "24% inseriram dados de clientes ou colaboradores (38% nas Lojas)"], valor: ["att", "Sem medição"], sust: ["att", "Sem dono"], efic: ["att", "Até R$ 46 mil/mês sem centro de custo; 120 para 420 assinaturas em 12 meses"], contr: ["ok", "Assinaturas avulsas"] },
+    fund: "Uso fora de controle, com dados pessoais em ferramentas externas.",
+    acoes: ["Cancelar assinaturas pagas por cartão corporativo", "Bloquear compra de IA fora do catálogo", "Oferecer ferramenta homologada na renovação da suíte (jan/2027)"],
+    med: "Adesão à ferramenta homologada, assinaturas fora do catálogo e incidentes de dados.", portao: "Substituição, não ampliação." },
+];
+
+const TIMELINE = [
+  { d: "2026-07-14", t: "Incidente de dados no agente de atendimento", sh: "Incidente de dados", side: "up", lv: 1, k: "fato" },
+  { d: "2026-08-05", t: "Comunicação à ANPD e titulares (22 dias depois)", sh: "ANPD comunicada (22 dias)", side: "down", lv: 0, k: "fato" },
+  { d: "2026-08-20", t: "CFO congela novos projetos de IA", sh: "Congelamento do CFO", side: "up", lv: 0, k: "fato" },
+  { d: "2026-10-01", t: "Marina Toledo assume como Head de IA", sh: "Head de IA assume", side: "down", lv: 1, k: "fato" },
+  { d: "2026-11-05", t: "Comitê executivo", sh: "Comitê executivo", side: "up", lv: 1, k: "marco" },
+  { d: "2026-11-20", t: "Saída do analista do app de escala (nov.)", sh: "Saída do analista (nov.)", side: "down", lv: 0, k: "prazo" },
+  { d: "2026-12-31", t: "Vence contrato da consultoria de Logística", sh: "Fim da consultoria (31/12)", side: "up", lv: 0, k: "prazo" },
+  { d: "2027-01-15", t: "Renovação da suíte de produtividade · Portão 1 do atendimento", sh: "Suíte · Portão 1", side: "down", lv: 1, k: "prazo" },
+  { d: "2027-03-15", t: "Renovação da 1ª nuvem · plataforma de referência · decisão da Fase 2", sh: "1ª nuvem · plataforma", side: "up", lv: 0, k: "prazo" },
+  { d: "2027-06-15", t: "Renovação da 2ª nuvem · Portão 2 do atendimento · extensão do app de escala", sh: "2ª nuvem · Portão 2", side: "down", lv: 0, k: "prazo" },
+];
+
+const PLAN = [
+  { q: "Novembro de 2026", m: "Autonomia de reembolso retirada; app de escala migrado; credenciais das transportadoras no cofre; revisão humana no crédito; assinaturas bloqueadas; nuvem sem dono desligada" },
+  { q: "Dezembro de 2026", m: "Inventário único; consultoria renovada só para transição; contratos do Provedor X unificados; fichas de valor das oito iniciativas" },
+  { q: "Janeiro de 2027", m: "Ferramenta de IA homologada na renovação da suíte; Portão 1 do agente de atendimento" },
+  { q: "Março de 2027", m: "Plataforma de referência escolhida; primeira certificação de economia; decisão sobre a Fase 2 da área central" },
+  { q: "Junho de 2027", m: "Migração na 2ª nuvem; Portão 2 do atendimento; decisão de extensão do app de escala" },
+];
+
+const ALCADAS = [
+  ["Classificação de risco", "Unidade", "Head de IA", "Jurídico/DPO", "Comitê de IA"],
+  ["Risco baixo", "Unidade", "Dono da unidade (nível 3) ou Head de IA (níveis 1–2)", "TI", "Inventário"],
+  ["Risco médio", "Unidade", "Head de IA + DPO", "TI, Controladoria", "Comitê de IA"],
+  ["Risco alto", "Unidade", "Comitê de IA", "Jurídico, Riscos", "CEO"],
+  ["Ampliação", "Dono da iniciativa", "Alçada do risco + portão certificado", "Controladoria", "Comitê de IA"],
+  ["Contrato de até 12 meses, sem multa", "Unidade/Compras", "CIO", "Head de IA", "Controladoria"],
+  ["Contrato plurianual ou com multa", "Unidade/Compras", "CFO + CIO + Head de IA", "Jurídico", "Comitê executivo"],
+  ["Suspensão por incidente", "Qualquer pessoa", "Head de IA ou DPO, de imediato", "Dono da iniciativa", "Comitê de IA e CEO"],
+  ["Certificação de benefício", "Dono da iniciativa", "Controladoria", "Head de IA", "Comitê de IA"],
+];
+
+/* ============================== HELPERS ============================== */
+const NS = "http://www.w3.org/2000/svg";
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, html) => { const e = document.createElement(tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (html !== undefined) e.innerHTML = html; return e; };
+const sv = (tag, attrs = {}, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
+const brl = v => "R$ " + (v >= 1000 ? (v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi" : v.toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil");
+const tip = $("#tip");
+function hover(node, html) {
+  node.addEventListener("mousemove", e => { tip.innerHTML = html; tip.style.opacity = 1; tip.style.left = Math.min(e.clientX + 12, innerWidth - 300) + "px"; tip.style.top = e.clientY + 12 + "px"; });
+  node.addEventListener("mouseleave", () => tip.style.opacity = 0);
+}
+function card(title, sub, src) {
+  const c = el("div", { class: "card" });
+  c.appendChild(el("h2", {}, title));
+  if (sub) c.appendChild(el("p", { class: "sub" }, sub));
+  const body = el("div"); c.appendChild(body);
+  if (src) c.appendChild(el("div", { class: "src" }, src));
+  c.body = body; return c;
+}
+function svgBox(w, h, label) { const s = sv("svg", { viewBox: `0 0 ${w} ${h}`, width: "100%", role: "img", "aria-label": label }); return s; }
+
+/* Barras horizontais */
+function hbar(items, { max, fmt = v => v, label = "", labelW = 230, color = "var(--navy-2)", h = 26 } = {}) {
+  const W = 640, H = items.length * h + 8, m = max || Math.max(...items.map(i => i.v));
+  const s = svgBox(W, H, label);
+  items.forEach((it, i) => {
+    const y = i * h + 4, bw = Math.max(2, (W - labelW - 90) * it.v / m);
+    s.appendChild(sv("text", { x: labelW - 8, y: y + h / 2 + 4, "text-anchor": "end", "font-size": 12.5, fill: "#1b2430" }, it.label));
+    const r = sv("rect", { x: labelW, y: y + 4, width: bw, height: h - 9, rx: 3, fill: it.c || color });
+    s.appendChild(r);
+    s.appendChild(sv("text", { x: labelW + bw + 6, y: y + h / 2 + 4, "font-size": 12.5, "font-weight": 600, fill: "#1b2430" }, fmt(it.v)));
+    hover(r, `<b>${it.label}</b><br>${fmt(it.v)}${it.note ? "<br>" + it.note : ""}${it.how ? "<br>" + it.how : ""}`);
+  });
+  return s;
+}
+
+/* Antes e depois */
+function dumbbell(rows, label) {
+  const W = 640, h = 46, H = rows.length * h + 26, L = 200, R = W - 40;
+  const s = svgBox(W, H, label);
+  s.appendChild(sv("circle", { cx: L + 5, cy: 8, r: 5, fill: "#a9b4c0" }));
+  s.appendChild(sv("text", { x: L + 14, y: 12, "font-size": 11, fill: "#5d6b7a" }, "início do período"));
+  s.appendChild(sv("circle", { cx: L + 125, cy: 8, r: 5, fill: "var(--crit)" }));
+  s.appendChild(sv("text", { x: L + 134, y: 12, "font-size": 11, fill: "#5d6b7a" }, "último dado (vermelho = piora)"));
+  rows.forEach((r, i) => {
+    const y = 26 + i * h + h / 2, x = v => L + (R - L) * v / r.max, xa = x(r.a), xb = x(r.b);
+    const bad = r.worse === "up" ? r.b > r.a : r.worse === "down" ? r.b < r.a : false;
+    s.appendChild(sv("text", { x: L - 10, y: y + 4, "text-anchor": "end", "font-size": 12.5 }, r.label));
+    s.appendChild(sv("line", { x1: L, x2: R, y1: y, y2: y, stroke: "#edf1f5", "stroke-width": 8, "stroke-linecap": "round" }));
+    s.appendChild(sv("line", { x1: xa, x2: xb, y1: y, y2: y, stroke: bad ? "var(--crit)" : "#a9b4c0", "stroke-width": 4 }));
+    s.appendChild(sv("circle", { cx: xa, cy: y, r: 7, fill: "#a9b4c0" }));
+    s.appendChild(sv("circle", { cx: xb, cy: y, r: 7, fill: bad ? "var(--crit)" : "var(--navy-2)" }));
+    const aLeft = xa <= xb, close = Math.abs(xb - xa) < 40;
+    s.appendChild(sv("text", { x: xa + (close ? (aLeft ? -12 : 12) : 0), y: y - 11, "text-anchor": close ? (aLeft ? "end" : "start") : "middle", "font-size": 11.5, fill: "#5d6b7a" }, r.fmt(r.a)));
+    s.appendChild(sv("text", { x: xb + (close ? (aLeft ? 12 : -12) : 0), y: y - 11, "text-anchor": close ? (aLeft ? "start" : "end") : "middle", "font-size": 11.5, "font-weight": 700, fill: bad ? "var(--crit)" : "#1b2430" }, r.fmt(r.b)));
+  });
+  return s;
+}
+
+/* Barra empilhada única */
+function stacked(parts, total, label, fmt = brl) {
+  const W = 640, H = 70, s = svgBox(W, H, label); let x = 0;
+  parts.forEach(p => {
+    const w = W * p.v / total, r = sv("rect", { x, y: 8, width: Math.max(w, 1), height: 34, fill: p.c, stroke: "#fff", "stroke-width": 1 });
+    s.appendChild(r); hover(r, `<b>${p.label}</b><br>${fmt(p.v)} (${Math.round(100 * p.v / total)}%)${p.note ? "<br>" + p.note : ""}`);
+    if (w > 46) s.appendChild(sv("text", { x: x + w / 2, y: 30, "text-anchor": "middle", "font-size": 11.5, fill: "#fff", "font-weight": 600 }, Math.round(100 * p.v / total) + "%"));
+    x += w;
+  });
+  s.appendChild(sv("text", { x: 0, y: 62, "font-size": 11.5, fill: "#5d6b7a" }, "0"));
+  s.appendChild(sv("text", { x: W, y: 62, "text-anchor": "end", "font-size": 11.5, fill: "#5d6b7a" }, fmt(total)));
+  return s;
+}
+function legend(parts) { return el("div", { class: "legend" }, parts.map(p => `<span><i style="background:${p.c}"></i>${p.label}</span>`).join("")); }
+
+/* Barras verticais com anotações */
+function vbars(items, { fmt = v => v + "%", label = "", max } = {}) {
+  const W = 640, H = 260, B = 190, m = max || Math.max(...items.map(i => i.v)) * 1.15, bw = 90, gap = (W - items.length * bw) / (items.length + 1);
+  const s = svgBox(W, H, label);
+  s.appendChild(sv("line", { x1: 0, x2: W, y1: B, y2: B, stroke: "#c9d2dc" }));
+  items.forEach((it, i) => {
+    const x = gap + i * (bw + gap), hh = (B - 30) * it.v / m;
+    const r = sv("rect", { x, y: B - hh, width: bw, height: hh, rx: 4, fill: it.c || (it.v > 15 ? "var(--crit)" : "var(--navy-2)") });
+    s.appendChild(r); hover(r, `<b>${it.label}</b><br>${fmt(it.v)}${it.ev ? "<br>" + it.ev : ""}`);
+    s.appendChild(sv("text", { x: x + bw / 2, y: B - hh - 7, "text-anchor": "middle", "font-size": 14, "font-weight": 700 }, fmt(it.v)));
+    s.appendChild(sv("text", { x: x + bw / 2, y: B + 18, "text-anchor": "middle", "font-size": 12 }, it.label));
+    if (it.ev) {
+      const words = it.ev.split(" "), lines = [""];
+      words.forEach(w => { if ((lines[lines.length - 1] + " " + w).trim().length > 26) lines.push(w); else lines[lines.length - 1] = (lines[lines.length - 1] + " " + w).trim(); });
+      lines.slice(0, 3).forEach((ln, k) => s.appendChild(sv("text", { x: x + bw / 2, y: B + 34 + k * 13, "text-anchor": "middle", "font-size": 10.5, fill: "#5d6b7a" }, ln)));
+    }
+  });
+  return s;
+}
+
+/* Medidor de percentual */
+function gauges(items) {
+  const wrap = el("div");
+  items.forEach(it => {
+    const row = el("div", { style: "margin:8px 0" });
+    row.innerHTML = `<div style="display:flex;justify-content:space-between;font-size:13px"><span>${it.label}</span><b>${it.v}%</b></div>
+      <div style="background:#edf1f5;border-radius:6px;height:12px;margin-top:3px"><div style="width:${it.v}%;background:${it.c || "var(--navy-2)"};height:12px;border-radius:6px"></div></div>`;
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+/* Linha do tempo */
+function timeline(items) {
+  const W = 1240, H = 230, t0 = new Date("2026-07-01"), t1 = new Date("2027-07-01"), x = d => 30 + (W - 60) * (new Date(d) - t0) / (t1 - t0);
+  const s = svgBox(W, H, "Linha do tempo de fatos e prazos");
+  const Y = 115;
+  s.appendChild(sv("line", { x1: 30, x2: W - 30, y1: Y, y2: Y, stroke: "#9aa9b5", "stroke-width": 2 }));
+  for (let m = 0; m <= 12; m++) {
+    const d = new Date(2026, 6 + m, 1), xx = x(d);
+    s.appendChild(sv("line", { x1: xx, x2: xx, y1: Y - 4, y2: Y + 4, stroke: "#9aa9b5" }));
+    s.appendChild(sv("text", { x: xx, y: Y + 18, "text-anchor": "middle", "font-size": 10.5, fill: "#5d6b7a" }, d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(". de ", "/").replace(" de ", "/")));
+  }
+  const today = x("2026-10-31");
+  s.appendChild(sv("line", { x1: today, x2: today, y1: 20, y2: H - 20, stroke: "var(--navy)", "stroke-dasharray": "4 4" }));
+  s.appendChild(sv("text", { x: today + 4, y: 18, "font-size": 10.5, fill: "var(--navy)" }, "hoje (31/out)"));
+  const col = { fato: "#7f8c99", marco: "var(--navy)", prazo: "var(--crit)" };
+  items.forEach((it, i) => {
+    const xx = x(it.d), up = it.side === "up", yy = up ? Y - 30 - it.lv * 34 : Y + 42 + it.lv * 34;
+    s.appendChild(sv("line", { x1: xx, x2: xx, y1: Y, y2: yy + (up ? 6 : -12), stroke: col[it.k], "stroke-width": 1 }));
+    const c = sv("circle", { cx: xx, cy: Y, r: it.k === "marco" ? 8 : 6, fill: col[it.k] }); s.appendChild(c);
+    hover(c, `<b>${new Date(it.d + "T12:00").toLocaleDateString("pt-BR")}</b><br>${it.t}`);
+    const anchor = xx < 300 ? "start" : xx > W - 160 ? "end" : "middle";
+    const tx = sv("text", { x: xx + (anchor === "start" ? -4 : anchor === "end" ? 4 : 0), y: yy, "text-anchor": anchor, "font-size": 11.5, fill: col[it.k], "font-weight": it.k === "marco" ? 700 : 500 }, it.sh);
+    s.appendChild(tx); hover(tx, it.t);
+  });
+  return s;
+}
+
+/* ============================== SEÇÕES ============================== */
+const SECTIONS = [
+  ["visao", "Visão geral", renderVisao],
+  ["custos", "Custo e valor", renderCustos],
+  ["portfolio", "Portfólio (8 iniciativas)", renderPortfolio],
+  ["riscos", "Riscos", renderRiscos],
+  ["modelo", "Modelo operacional", renderModelo],
+  ["medicao", "Medição", renderMedicao],
+  ["calendario", "Calendário", renderCalendario],
+];
+
+function renderVisao(p) {
+  const k = el("div", { class: "grid g4" });
+  [["R$ 519 mil", "Gasto com IA em ago/2026 (3,6× set/2025)"], ["R$ 141 mi/ano", "Benefícios declarados; R$ 0 certificado", true],
+   ["1.840", "Reembolsos indevidos em junho (cerca de R$ 312 mil)", true], ["61%", "Usam IA não fornecida pela empresa", true]]
+    .forEach(([v, l, a]) => k.appendChild(el("div", { class: "card kpi" + (a ? " alert" : "") }, `<div class="v">${v}</div><div class="l">${l}</div>`)));
+  p.appendChild(k);
+
+  const g = el("div", { class: "grid g2", style: "margin-top:16px" });
+  const rec = card("Recomendação: escalar com guardrails", "O congelamento vira um portão de entrada. Ampliar só depois de cumprir os padrões mínimos e ter medição aprovada pela Controladoria.");
+  rec.body.innerHTML = `
+    <div class="decision"><b>Digital · agente de atendimento de 40% para 80%</b><br>Não aprovado como apresentado. Fica em 40%, perde a autonomia de reembolso agora e sobe a 60% e a 80% por dois portões condicionados.</div>
+    <div class="decision"><b>Lojas · aplicativo de escala</b><br>Oficializado já, no sentido de transferido para a empresa antes da saída do analista. Extensão a outras regionais depende de RIPD e piloto medido.</div>
+    <div class="decision"><b>Condições do CFO</b><br>Contrafactual obrigatório; área central começa com pessoas cedidas e cresce só contra economia certificada; contrato plurianual exige CFO + CIO + Head de IA.</div>`;
+  g.appendChild(rec);
+
+  const dir = card("Direcionamento das oito iniciativas", "Nenhuma é ampliada nesta reunião; duas têm caminho condicionado de ampliação.", "Critérios e detalhes na aba Portfólio.");
+  const counts = { corrigir: 0, manter: 0, desligar: 0 };
+  INIT.forEach(i => counts[i.dir]++);
+  dir.body.appendChild(hbar([
+    { label: "Corrigir", v: counts.corrigir, c: "var(--corrigir)" },
+    { label: "Manter", v: counts.manter, c: "var(--manter)" },
+    { label: "Desligar", v: counts.desligar, c: "var(--desligar)" },
+    { label: "Ampliar agora", v: 0.001, c: "var(--ampliar)" },
+  ], { max: 8, fmt: v => v < 1 ? "0" : String(v), labelW: 120, label: "Contagem por direção" }));
+  dir.body.appendChild(el("div", { style: "margin-top:8px" }, INIT.map(i => `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line)"><span>${i.id}. ${i.nome} <span style="color:var(--muted)">· ${i.un}</span></span><span class="pill p-${i.dir}">${i.dir[0].toUpperCase() + i.dir.slice(1)}${i.ampl ? " · ampliação condicionada" : ""}</span></div>`).join("")));
+  g.appendChild(dir);
+  p.appendChild(g);
+}
+
+function renderCustos(p) {
+  const g = el("div", { class: "grid g2" });
+  const c1 = card("Gasto mensal com IA", "3,6 vezes em doze meses; R$ 3,9 milhões acumulados no período.", "Apêndice E1. A série mensal completa não consta do material; o painel mostra só os dois pontos citados.");
+  c1.body.appendChild(hbar([{ label: "Set/2025", v: D.custo.set25, c: "#a9b4c0" }, { label: "Ago/2026", v: D.custo.ago26, c: "var(--navy)" }], { fmt: brl, labelW: 90, label: "Gasto mensal" }));
+  g.appendChild(c1);
+
+  const comp = D.custo.composicaoAgo26.slice();
+  const known = comp.reduce((a, b) => a + b.v, 0);
+  comp.push({ label: "Demais itens (calculado)", v: +(D.custo.ago26 - known).toFixed(1), c: "#dfe5ec", note: "Residual: R$ 519 mil menos os itens citados no case. Inclui recompra, crédito e assistente de RH." });
+  const c2 = card("Composição do gasto em agosto de 2026", "Passe o mouse para ver valores. R$ 131 mil/mês (nuvem sem dono e assinaturas) não têm dono nem centro de custo.", "Apêndice E1. O residual é calculado e pode ser maior, porque o valor das assinaturas é um teto.");
+  c2.body.appendChild(stacked(comp, D.custo.ago26, "Composição do gasto de agosto"));
+  c2.body.appendChild(legend(comp));
+  g.appendChild(c2);
+
+  const c3 = card("Benefício declarado contra custo", "Os benefícios declarados equivalem a 36 vezes o custo de IA do período e a 39% do lucro líquido do grupo. Nenhum foi certificado.", "Apêndice E2. Itens sem detalhamento no case aparecem como residual calculado.");
+  const b = D.beneficio, rest = b.declaradoAno - b.itens.reduce((a, x) => a + x.v, 0);
+  c3.body.appendChild(hbar([
+    ...b.itens.map(x => ({ ...x, c: "#e0a800" })),
+    { label: "Demais áreas (calculado)", v: rest, c: "#f1d98a", how: "R$ 141 mi menos os três itens citados" },
+    { label: "Custo de IA em 12 meses", v: D.custo.acum12m, c: "var(--navy)" },
+    { label: "Benefício certificado", v: 0.001, c: "var(--ok)", how: "Nenhum benefício passou por validação de Finanças" },
+  ], { fmt: v => v < 1 ? "R$ 0" : brl(v), labelW: 200, label: "Benefício declarado versus custo" }));
+  g.appendChild(c3);
+
+  const c4 = card("Onde está a economia que o CFO pediu", "Economias nas iniciativas existentes, sem estrutura nova. Valores são os citados no case; a economia efetiva será certificada pela Controladoria.");
+  c4.body.innerHTML = `<table><thead><tr><th>Fonte</th><th>Base no case</th><th>Ação</th></tr></thead><tbody>
+    <tr><td>Nuvem sem dono</td><td>R$ 85 mil/mês (16% da conta)</td><td>Desligar após aviso</td></tr>
+    <tr><td>Assinaturas individuais</td><td>até R$ 46 mil/mês; 420 contas</td><td>Cancelar e substituir</td></tr>
+    <tr><td>Tokens do atendimento</td><td>cerca de R$ 95 mil/mês; 30 mil tokens/mensagem</td><td>Enviar só trechos pertinentes</td></tr>
+    <tr><td>Agente de atrasos</td><td>R$ 119 mil/mês; modelo topo nas 8 etapas</td><td>Modelos menores nas etapas triviais</td></tr>
+    <tr><td>Reembolsos indevidos</td><td>cerca de R$ 312 mil em junho</td><td>Limites e verificação de status</td></tr>
+    <tr><td>Provedor X duplicado</td><td>2 contratos sem desconto por volume</td><td>Unificar</td></tr></tbody></table>`;
+  const c5 = el("div"); c5.appendChild(hbar(D.custo.atrasos.map(x => ({ ...x, c: "#e07b00" })), { fmt: brl, labelW: 170, label: "Custo do agente de atrasos" }));
+  c4.body.appendChild(el("p", { class: "sub", style: "margin:12px 0 4px" }, "Custo mensal do agente de atrasos"));
+  c4.body.appendChild(c5);
+  g.appendChild(c4);
+  p.appendChild(g);
+}
+
+let filtro = "todas", sel = 1;
+function renderPortfolio(p) {
+  const g = el("div", { class: "grid", style: "grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)" });
+  const left = card("Matriz de avaliação", "Clique em uma linha para ver o detalhe. Regra sequencial: risco não controlado leva a corrigir; sem valor e sem dono, desligar; risco controlado e valor plausível, manter; ampliar só após portão.", "Anexo 1 do memorando.");
+  const chips = el("div", { class: "chips" });
+  [["todas", "Todas"], ["corrigir", "Corrigir"], ["manter", "Manter"], ["desligar", "Desligar"]].forEach(([k, l]) => {
+    const b = el("button", { class: "chip", "aria-pressed": String(filtro === k) }, l);
+    b.onclick = () => { filtro = k; draw(); }; chips.appendChild(b);
+  });
+  left.body.appendChild(chips);
+  const tbl = el("table", { class: "heat" }); left.body.appendChild(tbl);
+  left.body.appendChild(el("div", { class: "legend" }, Object.values(LV).map(l => `<span><i style="background:${l.c}"></i>${l.t}</span>`).join("")));
+  const right = card("Detalhe"); right.classList.add("detail");
+  g.appendChild(left); g.appendChild(right); p.appendChild(g);
+
+  function draw() {
+    chips.querySelectorAll(".chip").forEach((b, i) => b.setAttribute("aria-pressed", String(["todas", "corrigir", "manter", "desligar"][i] === filtro)));
+    tbl.innerHTML = `<thead><tr><th>#</th><th>Iniciativa</th>${CRIT.map(c => `<th style="text-align:center">${c[1]}</th>`).join("")}<th>Direção</th></tr></thead>`;
+    const tb = el("tbody");
+    INIT.filter(i => filtro === "todas" || i.dir === filtro).forEach(i => {
+      const tr = el("tr", { class: "row" + (i.id === sel ? " sel" : ""), tabindex: 0 });
+      tr.innerHTML = `<td>${i.id}</td><td><b>${i.nome}</b><br><span style="color:var(--muted);font-size:12px">${i.un}</span></td>` +
+        CRIT.map(([k]) => `<td class="cell"><span style="background:${LV[i.s[k][0]].c}">${LV[i.s[k][0]].t}</span></td>`).join("") +
+        `<td><span class="pill p-${i.dir}">${i.dir[0].toUpperCase() + i.dir.slice(1)}</span></td>`;
+      tr.querySelectorAll("td.cell").forEach((td, j) => hover(td, `<b>${CRIT[j][1]}</b><br>${i.s[CRIT[j][0]][1]}`));
+      tr.onclick = tr.onkeydown = e => { if (e.type === "keydown" && e.key !== "Enter") return; sel = i.id; draw(); };
+      tb.appendChild(tr);
+    });
+    tbl.appendChild(tb);
+    const i = INIT.find(x => x.id === sel);
+    right.body.innerHTML = `<h3>${i.id}. ${i.nome}</h3><span class="pill p-${i.dir}">${i.dir[0].toUpperCase() + i.dir.slice(1)}</span>
+      <span style="color:var(--muted);margin-left:6px">${i.un}</span>
+      <div class="k">Fundamento</div><div>${i.fund}</div>
+      <div class="k">Ações</div><ul>${i.acoes.map(a => `<li>${a}</li>`).join("")}</ul>
+      <div class="k">Como será medido</div><div>${i.med}</div>
+      <div class="k">Portão / ampliação</div><div>${i.portao}</div>
+      <div class="k">Avaliação por critério</div>
+      <ul style="list-style:none;padding:0">${CRIT.map(([k, l]) => `<li style="margin:4px 0"><span class="lvl l-${i.s[k][0]}"></span><b>${l}:</b> ${i.s[k][1]}</li>`).join("")}</ul>`;
+  }
+  draw();
+}
+
+function renderRiscos(p) {
+  const g = el("div", { class: "grid g2" });
+  const c1 = card("Modelo de crédito a sellers", "A inadimplência mais que dobrou enquanto a taxa de aprovação ficou parada entre 62% e 63%: o corte não reage ao risco. A equipe classificou como oscilação pontual.", "Apêndice F1.");
+  c1.body.appendChild(dumbbell(D.credito, "Indicadores do modelo de crédito, início e fim do período"));
+  g.appendChild(c1);
+
+  const c2 = card("Atraso de entregas", "O atraso caiu de 23% para 6% no mês em que o grupo voltou à transportadora anterior. Atribuir essa queda ao agente, como faz o benefício de R$ 65 mi/ano, não se sustenta sem contrafactual.", "Apêndice B1.");
+  c2.body.appendChild(vbars(D.atraso, { label: "Percentual de entregas atrasadas" }));
+  g.appendChild(c2);
+
+  const c3 = card("Agente de atendimento", "Defeitos documentados e ainda não corrigidos na ficha da iniciativa.", "Apêndices A2, G1 e H1. Prazo regulatório: Resolução CD/ANPD nº 15/2024.");
+  c3.body.appendChild(gauges([
+    { label: "Atendimentos resolvidos sem humano (meta 60%)", v: 55, c: "var(--att)" },
+    { label: "Transferidos para atendimento humano", v: 45, c: "#a9b4c0" },
+    { label: "Participação atual no chat (pedido: 80%)", v: 40, c: "var(--navy-2)" },
+  ]));
+  c3.body.appendChild(el("div", { class: "grid g3", style: "margin-top:10px;gap:10px" },
+    [["1.840", "reembolsos indevidos em junho"], ["R$ 312 mil", "valor aproximado desses reembolsos"], ["22 dias", "da detecção à comunicação à ANPD (prazo: 3 dias úteis)"]]
+      .map(([v, l]) => `<div class="kpi alert"><div class="v" style="font-size:20px">${v}</div><div class="l">${l}</div></div>`).join("")));
+  g.appendChild(c3);
+
+  const c4 = card("Uso de IA fora do controle", "Pesquisa de maturidade com 247 respondentes de 495 convidados. As assinaturas individuais passaram de 120 para 420 em doze meses.", "Apêndice C1.");
+  c4.body.appendChild(gauges(D.shadow.map((s, i) => ({ ...s, c: i ? "var(--crit)" : "var(--att)" }))));
+  c4.body.appendChild(el("p", { class: "sub", style: "margin:12px 0 4px" }, "Assinaturas individuais de ferramentas de IA"));
+  c4.body.appendChild(hbar([{ label: "Set/2025", v: 120, c: "#a9b4c0" }, { label: "Ago/2026", v: 420, c: "var(--crit)" }], { labelW: 90, label: "Assinaturas individuais" }));
+  g.appendChild(c4);
+
+  const c5 = card("Situação jurídica do portfólio", "Nota do Jurídico sobre as oito iniciativas. Nenhum relatório de impacto (RIPD) foi elaborado.", "Apêndice H1. A nota não identifica, no material disponível, quais iniciativas estão em cada grupo.");
+  c5.body.appendChild(stacked([
+    { label: "Base legal ausente", v: 4, c: "var(--crit)" }, { label: "Base legal parcial", v: 1, c: "var(--att)" }, { label: "Sem apontamento", v: 3, c: "#a9b4c0" },
+  ], 8, "Base legal das oito iniciativas", v => v + (v === 1 ? " iniciativa" : " iniciativas")));
+  c5.body.appendChild(legend([{ label: "Base legal ausente (4)", c: "var(--crit)" }, { label: "Parcial (1)", c: "var(--att)" }, { label: "Sem apontamento (3)", c: "#a9b4c0" }]));
+  g.appendChild(c5);
+
+  const c6 = card("Aplicativo de escala de turnos", "O item mais arriscado do portfólio é também o mais barato.", "Apêndice A4.");
+  c6.body.appendChild(el("div", { class: "grid g2", style: "gap:10px" },
+    [["1.300", "colaboradores (aprox.) com CPF e afastamentos expostos"], ["45", "gerentes com a mesma senha"], ["1", "pessoa sabe operar o código, e sai em novembro"], ["R$ 600", "custo mensal"]]
+      .map(([v, l], i) => `<div class="kpi ${i < 3 ? "alert" : ""}"><div class="v" style="font-size:22px">${v}</div><div class="l">${l}</div></div>`).join("")));
+  g.appendChild(c6);
+  p.appendChild(g);
+}
+
+function renderModelo(p) {
+  const g = el("div", { class: "grid g2" });
+  const c1 = card("Maturidade por unidade e nível de autonomia proposto", "Escala de cinco estágios. A autonomia acompanha a maturidade demonstrada. Digital e Serviços Financeiros têm 1,4 ponto de diferença entre lideranças e equipes em governança.", "Apêndice C1 e Seção 2 do memorando.");
+  const W = 640, h = 34, L = 170, s = svgBox(W, D.maturidade.length * h + 30, "Maturidade por unidade");
+  for (let t = 1; t <= 5; t++) { const x = L + (W - L - 140) * t / 5; s.appendChild(sv("line", { x1: x, x2: x, y1: 0, y2: D.maturidade.length * h, stroke: "#edf1f5" })); s.appendChild(sv("text", { x, y: D.maturidade.length * h + 16, "text-anchor": "middle", "font-size": 11, fill: "#5d6b7a" }, t)); }
+  const cl = { "3": "var(--ok)", "2": "var(--att)", "1": "var(--crit)" };
+  D.maturidade.forEach((m, i) => {
+    const y = i * h, bw = (W - L - 140) * m.v / 5, c = cl[m.nivel[0]];
+    s.appendChild(sv("text", { x: L - 8, y: y + 21, "text-anchor": "end", "font-size": 12.5 }, m.u));
+    const r = sv("rect", { x: L, y: y + 6, width: bw, height: h - 12, rx: 3, fill: c }); s.appendChild(r);
+    hover(r, `<b>${m.u}</b>: ${String(m.v).replace(".", ",")}<br>Nível proposto: ${m.nivel}${m.gov ? "<br>Divergência em governança: " + String(m.gov).replace(".", ",") + " ponto" : ""}`);
+    s.appendChild(sv("text", { x: L + bw + 6, y: y + 21, "font-size": 12.5, "font-weight": 700 }, String(m.v).replace(".", ",")));
+    s.appendChild(sv("text", { x: W - 4, y: y + 21, "text-anchor": "end", "font-size": 12, fill: c, "font-weight": 600 }, "Nível " + m.nivel));
+  });
+  c1.body.appendChild(s);
+  g.appendChild(c1);
+
+  const c2 = card("Como cada grupo quer organizar a IA", "Cada grupo defende o modelo que preserva o próprio papel. Entre as equipes, o híbrido foi o mais votado.", "Apêndice C1.");
+  c2.body.appendChild(hbar(D.preferencia.map(x => ({ label: x.g, v: x.v, c: x.o === "Híbrido" ? "var(--ok)" : x.o === "Centralização" ? "var(--navy-2)" : "var(--att)", note: x.o })), { max: 100, fmt: v => v + "%", labelW: 210, label: "Preferência de modelo" }));
+  c2.body.appendChild(legend([{ label: "Centralização", c: "var(--navy-2)" }, { label: "Autonomia das unidades", c: "var(--att)" }, { label: "Híbrido", c: "var(--ok)" }]));
+  g.appendChild(c2);
+
+  const c3 = card("Alternativas de modelo operacional", "Comparação usada no memorando.");
+  const alt = [["Centralizado na TI", "crit", "att", "att", "crit"], ["Padrão do Digital", "crit", "att", "ok", "crit"], ["Descentralizado (atual)", "crit", "ok", "ok", "crit"], ["Hub-and-spoke graduado", "ok", "ok", "ok", "ok"]];
+  c3.body.innerHTML = `<table class="heat"><thead><tr><th>Modelo</th><th style="text-align:center">Controle de risco</th><th style="text-align:center">Velocidade</th><th style="text-align:center">Cabe em pessoas e orçamento</th><th style="text-align:center">Aderência à maturidade</th></tr></thead><tbody>${
+    alt.map(a => `<tr><td><b>${a[0]}</b></td>${a.slice(1).map(l => `<td class="cell"><span style="background:${LV[l].c}">${LV[l].t}</span></td>`).join("")}</tr>`).join("")}</tbody></table>
+    <p class="sub" style="margin-top:8px">Leitura qualitativa da tabela da Seção 2 do memorando. Papéis no modelo recomendado: área central define o padrão, TI opera a plataforma e a unidade é dona do caso de uso e do benefício.</p>`;
+  g.appendChild(c3);
+
+  const c4 = card("Matriz de alçadas", "Quem propõe, aprova, é consultado e informado.", "Seção 3 do memorando.");
+  c4.body.innerHTML = `<table><thead><tr><th>Decisão</th><th>Propõe</th><th>Aprova</th><th>Consultado</th><th>Informado</th></tr></thead><tbody>${ALCADAS.map(r => `<tr>${r.map((c, i) => `<td>${i === 2 ? "<b>" + c + "</b>" : c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  g.appendChild(c4);
+  p.appendChild(g);
+}
+
+function renderMedicao(p) {
+  const g = el("div", { class: "grid g2" });
+  const c1 = card("Quatro estágios de benefício", "Só benefício certificado sustenta ampliação; só benefício realizado entra no orçamento. Hoje todo o valor está no primeiro estágio.", "Seção 5 do memorando.");
+  const st = [["Declarado", "pela unidade", "R$ 141 mi/ano"], ["Mensurado", "pela ficha de valor, com contrafactual", "R$ 0"], ["Certificado", "pela Controladoria", "R$ 0"], ["Realizado", "visível no orçamento", "R$ 0"]];
+  const W = 640, s = svgBox(W, 220, "Funil de estágios de benefício");
+  st.forEach((x, i) => {
+    const w = W - i * 110, y = i * 52, r = sv("rect", { x: (W - w) / 2, y, width: w, height: 44, rx: 6, fill: i === 0 ? "#e0a800" : "#c9d2dc" });
+    s.appendChild(r);
+    s.appendChild(sv("text", { x: W / 2, y: y + 19, "text-anchor": "middle", "font-size": 13.5, "font-weight": 700, fill: i === 0 ? "#fff" : "#1b2430" }, `${x[0]} · ${x[2]}`));
+    s.appendChild(sv("text", { x: W / 2, y: y + 35, "text-anchor": "middle", "font-size": 11.5, fill: i === 0 ? "#fff" : "#5d6b7a" }, x[1]));
+  });
+  c1.body.appendChild(s);
+  g.appendChild(c1);
+
+  const c2 = card("Hierarquia de evidência", "Comparação de antes e depois deixa de valer para certificação.");
+  c2.body.innerHTML = `<table><thead><tr><th>Força</th><th>Desenho</th><th>Onde se aplica</th></tr></thead><tbody>
+    <tr><td><span class="lvl l-ok"></span>Mais forte</td><td>Grupo de controle aleatório</td><td>Recompra, atendimento</td></tr>
+    <tr><td><span class="lvl l-ok"></span>Forte</td><td>Implantação escalonada comparada entre grupos</td><td>App de escala (45 lojas contra as demais), regionais</td></tr>
+    <tr><td><span class="lvl l-att"></span>Aceitável</td><td>Grupo pareado</td><td>Agente de atrasos, antifraude</td></tr>
+    <tr><td><span class="lvl l-crit"></span>Não aceito</td><td>Antes e depois</td><td>Método usado hoje em todos os benefícios declarados</td></tr></tbody></table>`;
+  g.appendChild(c2);
+
+  const c3 = card("Portão de entrada: oito padrões mínimos", "Exigidos para entrar em produção ou ampliar.", "Anexo 2 do memorando.");
+  const pad = [["Inventário com dono de negócio e técnico", "Área central"], ["Contas, credenciais e acesso corporativos", "TI"], ["Base legal, RIPD e minimização", "Jurídico/DPO"], ["Limites de ação autônoma e revisão humana", "Área central"], ["Avaliação independente, incluindo vazamento", "Área central"], ["Monitoramento e resposta a incidentes no prazo da ANPD", "TI + DPO"], ["Ficha de valor com linha de base e contrafactual", "Controladoria"], ["Custo por iniciativa e por unidade de resultado", "Controladoria + TI"]];
+  c3.body.innerHTML = `<table><thead><tr><th>#</th><th>Padrão</th><th>Verifica</th></tr></thead><tbody>${pad.map((x, i) => `<tr><td>${i + 1}</td><td>${x[0]}</td><td>${x[1]}</td></tr>`).join("")}</tbody></table>`;
+  g.appendChild(c3);
+
+  const c4 = card("Métrica principal por iniciativa", "Cada uma ligada a uma linha do resultado.");
+  c4.body.innerHTML = `<table><thead><tr><th>Iniciativa</th><th>Como será medido</th></tr></thead><tbody>${INIT.map(i => `<tr><td><b>${i.nome}</b></td><td>${i.med}</td></tr>`).join("")}</tbody></table>`;
+  g.appendChild(c4);
+  p.appendChild(g);
+}
+
+function renderCalendario(p) {
+  const c1 = card("Linha do tempo: fatos e prazos", "Os prazos de novembro e dezembro vencem antes de qualquer plano de consolidação completo, que ficaria pronto em fevereiro.", "Datas sem dia exato no case (congelamento, saída do analista, renovações) estão posicionadas no meio do mês.");
+  c1.body.appendChild(timeline(TIMELINE));
+  c1.body.appendChild(legend([{ label: "Fato", c: "#7f8c99" }, { label: "Comitê", c: "var(--navy)" }, { label: "Prazo ou janela de decisão", c: "var(--crit)" }]));
+  p.appendChild(c1);
+  const c2 = card("Plano de execução", "Marcos do Anexo 2 do memorando.");
+  c2.body.innerHTML = `<table><thead><tr><th style="width:160px">Quando</th><th>Marco</th></tr></thead><tbody>${PLAN.map(x => `<tr><td><b>${x.q}</b></td><td>${x.m}</td></tr>`).join("")}</tbody></table>`;
+  c2.style.marginTop = "16px";
+  p.appendChild(c2);
+}
+
+/* ============================== NAVEGAÇÃO ============================== */
+const tabs = $("#tabs"), main = $("#main");
+SECTIONS.forEach(([id, label, fn], i) => {
+  const b = el("button", { role: "tab", id: "t-" + id, "aria-controls": "s-" + id, "aria-selected": String(i === 0) }, label);
+  const s = el("section", { role: "tabpanel", id: "s-" + id, "aria-labelledby": "t-" + id, class: i === 0 ? "active" : "" });
+  fn(s); main.appendChild(s); tabs.appendChild(b);
+  b.onclick = () => {
+    tabs.querySelectorAll("button").forEach(x => x.setAttribute("aria-selected", "false"));
+    main.querySelectorAll("section").forEach(x => x.classList.remove("active"));
+    b.setAttribute("aria-selected", "true"); s.classList.add("active"); history.replaceState(null, "", "#" + id);
+  };
+});
+const h = location.hash.slice(1); if (h && $("#t-" + h)) $("#t-" + h).click();
+</script>
+</body>
+</html>
